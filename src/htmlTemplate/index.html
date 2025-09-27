@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個股分析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body >
+<div class="bg-gray-200 h-screen">   
+    <h1 class="text-2xl p-6">個股分析</h1>
+    
+    <div class="border shadow p-6 bg-white">
+        <div class="border flex w-96">
+            <label for="" class="grow py-3 text-center border">股票代碼</label>
+            <input type="text" id="stockId" value="2330"  class="border-l border-r py-3 px-3 focus:outline-none focus:ring-2 focus:ring-green-400">
+            <button onclick="getStockChart()" class="bg-green-400 px-4 py-3 text-center hover:text-white hover:bg-green-500 transition">搜尋</button>
+        </div>
+        <p id="errorMessage" class="text-red-500 my-3"></p>
+    </div>
+
+    <div id="chartContainer" class="w-full md:w-1/2 h-96 bg-white mt-10 p-6">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <script>
+        //快取方式儲存資料
+        let allStockInfo = null
+
+        async function getStockChart() {
+          const stockId = document.getElementById('stockId').value.trim()
+          
+          const startDate ='2020-01-01'
+          const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stockId}&start_date=${startDate}`
+          const url2 = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo`//有股票名稱的資料
+
+          //清除舊有的訊息
+          document.getElementById('errorMessage').innerHTML = '';
+
+            if(!stockId){
+                document.getElementById('errorMessage').innerHTML = '請輸入股票代碼'
+                return
+            }
+
+            try{
+                const response = await fetch(url)
+                const result = await response.json()
+
+                if(!allStockInfo){
+                    const response2 = await fetch(url2)
+                    const result2 = await response2.json()
+
+                    allStockInfo = result2//儲存到全域快取
+                }
+               
+
+                if(!result.data || result.data.length === 0) {
+                    document.getElementById('errorMessage').innerHTML = "查無資料"
+                    //圖表銷毀
+                    if (window.myChartCanvas) {
+                        window.myChartCanvas.destroy()
+                    }
+
+                    document.getElementById('chartContainer').style.display = 'none';
+                    return    
+                }
+
+                const dates = result.data.map(item => item.date)
+                const prices = result.data.map(item => item.close)
+                
+                //使用快取資料
+                const nameInfo = allStockInfo.data.find(item => item.stock_id === stockId)
+                let stockName = stockId;
+                //預防輸入股票代號股票資訊找不到nameInfo 會回傳 undefined
+                if (nameInfo) {
+                    stockName = nameInfo.stock_name;
+                }
+                document.getElementById('chartContainer').style.display = 'block';
+                drawChart(dates,prices,stockId,stockName);
+                
+            }catch (error) {
+                document.getElementById('errorMessage').innerHTML = '網路請求失敗，請檢查連線。'
+                console.error(error)
+            }
+        
+
+        } 
+        function drawChart(dates,prices,stockId,stockName) {
+            const ctx = document.getElementById('myChart')
+
+            //destroy()為Chart.js方法 清理和移除舊圖表
+            if(window.myChartCanvas) {
+                window.myChartCanvas.destroy()
+            }
+
+
+
+            window.myChartCanvas = new Chart(ctx,{
+                type:'line',
+                data:{
+                    labels:dates,
+                    datasets:[{
+                        label:`${stockId}${stockName}收盤價`,
+                        data:prices,
+                        borderColor:'rgb(75,192,192)',
+                        tension:0.5 //線條的平滑程度
+                    }]
+                },
+                options:{
+                    responsive:true,
+                    //讓圖表不要維持預設(true)的長寬比，並讓它完全依賴容器。
+                    maintainAspectRatio:false,
+                    scales:{
+                        y:{
+                          beginAtZero:false,
+                        }
+                    },
+                   
+                }
+            });
+        }
+        
+        //網頁載入時用初始值去執行查詢該股票的動作
+        function initializeChart(){
+            //value是初始值
+            const initialId = document.getElementById('stockId').value
+            if (initialId) {
+                setTimeout(()=>{getStockChart()},50)
+
+            }
+        }
+
+        initializeChart()
+    </script>
+
+
+</div> 
+</body>
+</html>
