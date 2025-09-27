@@ -1,6 +1,7 @@
 <script setup>
-import stockAnalysis from './vueTemplate/stockAnalysis.vue'
 </script>
 <template>
-    <stockAnalysis/>
+    <div>
+        <router-view></router-view>
+    </div>
 </template>
