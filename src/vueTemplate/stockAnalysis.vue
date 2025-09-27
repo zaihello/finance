@@ -122,8 +122,8 @@ import { errorMessages } from 'vue/compiler-sfc'
         </div>
         <p class="text-red-500 my-3">{{ errorMessage }}</p>
     </div>
-
-    <div :class="{hidden:isHidden}" class="w-full md:w-1/2 h-96 bg-white mt-10 p-6">
+    <!-- :class="{hidden:isHidden}" -->
+    <div v-show="!isHidden" class="w-full md:w-1/2 h-96 bg-white mt-10 p-6">
         <canvas ref="ctx"></canvas>
     </div>
 </div>    
