@@ -115,7 +115,7 @@ import { errorMessages } from 'vue/compiler-sfc'
     <h1 class="text-2xl p-6">個股分析</h1>
     
     <div class="border shadow p-6 bg-white">
-        <div class="border flex w-96">
+        <div class="border flex w-full md:w-96">
             <label for="" class="grow py-3 text-center border">股票代碼</label>
             <input type="text" v-model="stockId"  class="border-l border-r py-3 px-3 focus:outline-none focus:ring-2 focus:ring-green-400">
             <button @click="getStockChart()" class="bg-green-400 px-4 py-3 text-center hover:text-white hover:bg-green-500 transition">搜尋</button>
