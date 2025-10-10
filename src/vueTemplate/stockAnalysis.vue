@@ -116,9 +116,9 @@ import { errorMessages } from 'vue/compiler-sfc'
     
     <div class="border shadow p-6 bg-white">
         <div class="border flex w-full md:w-96">
-            <label for="" class="grow py-3 text-center border">股票代碼</label>
-            <input type="text" v-model="stockId"  class="border-l border-r py-3 px-3 focus:outline-none focus:ring-2 focus:ring-green-400">
-            <button @click="getStockChart()" class="bg-green-400 px-4 py-3 text-center hover:text-white hover:bg-green-500 transition">搜尋</button>
+            <label for="" class="py-3 text-center border w-1/3">股票代碼</label>
+            <input type="text" v-model="stockId" class=" border-l border-r py-3 px-3 focus:outline-none focus:ring-2 focus:ring-green-400 w-1/3">
+            <button @click="getStockChart()" class="bg-green-400 px-4 py-3 text-center hover:text-white hover:bg-green-500 transition w-1/3">搜尋</button>
         </div>
         <p class="text-red-500 my-3">{{ errorMessage }}</p>
     </div>
