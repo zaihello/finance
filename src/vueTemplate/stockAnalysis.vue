@@ -1,6 +1,6 @@
 <script setup>
 import {ref,onMounted} from 'vue'
-import { errorMessages } from 'vue/compiler-sfc'
+// import { errorMessages } from 'vue/compiler-sfc'
     
     const allStockInfo = ref(null)//快取方式儲存資料
     const stockId = ref('2330')
@@ -15,7 +15,7 @@ import { errorMessages } from 'vue/compiler-sfc'
         const url2 = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo`//有股票名稱的資料
         
         //清除舊有的訊息
-        errorMessages.value = ''
+        errorMessage.value = ''
 
         if(!stockId.value){
             errorMessage.value = '請輸入股票代碼'
