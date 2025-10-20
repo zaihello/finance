@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K線圖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+<body>  
+    <div class="w-[800px]" >
+        <h1 class="w-full text-center p-4">K線圖</h1>
+        <div class="w-full flex justify-center gap-2 bg-slate-200 p-4">
+            <button id="btnDaily" class="px-8 py-2">日K</button>
+            <button id="btnWeekly" class="px-8 py-2">週K</button>
+            <button id="btnMonthly" class="px-8 py-2">月K</button>
+        </div>
+        <div id="main" style="width: 800px;height: 500px;"></div>
+    </div>
+</body>
+
+<script>
+    let stock_id = '2330'
+    const START_DATE = '2022-01-01'
+    const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stock_id}&start_date=${START_DATE}`
+    let stockData;
+    const KChart = echarts.init(document.getElementById('main'))
+    let globalDailyData;
+    let globalWeeklyData;
+    let globalMonthlyData;
+    const btnDaily = document.getElementById('btnDaily')
+    const btnWeekly = document.getElementById('btnWeekly')
+    const btnMonthly = document.getElementById('btnMonthly')
+    const activeClass = 'bg-white text-red-500'
+    const allBtn = [btnDaily,btnWeekly,btnMonthly]
+    
+   
+    async function getData() {
+      const resopen = await fetch(url)
+      stockData = await resopen.json() 
+    
+      const weeklyData = weeksData()//取得stockData資料在執行
+      const monthlyData = monthsData()
+      const dailyData = daysData()
+      return { weeklyData,monthlyData,dailyData }   
+    } 
+    //日K數據
+    function daysData() {
+        const dayKData = stockData.data.map(day => {
+            return {
+                open:day.open,
+                close:day.close,
+                high:day.max,
+                low:day.min,
+                date:day.date,
+            }
+        })
+        console.log('dayKData',dayKData)
+
+        return dayKData
+    }
+    //週K數據
+    function weeksData() {
+        //分週處理 (二維陣列)
+        //星期一~星期五為一週
+        //當日期為星期日為[0]，星期為六為[6]        
+        const weeksWithData = stockData.data.reduce((acc,item) => {
+            const dayIndex = new Date(item.date).getDay() 
+            // 跨週判斷需要參考前一個 item 的 date
+            const lastWeek = acc[acc.length - 1]
+            const prevItem = lastWeek ? lastWeek[lastWeek.length - 1] : null
+            const prevDayIndex = prevItem ? new Date(prevItem.date).getDay() : -1
+            //跨週邏輯
+            //1.初始情況(acc是空的)，也解決了第一週不是星期一的問題。
+            //2.星期1
+            //3.避免產生[1,2,2,3,4]
+            if(acc.length === 0 || dayIndex === 1 || dayIndex <= prevDayIndex) {
+                acc.push([])
+            }
+            acc[acc.length - 1].push(item)  
+            return acc
+            
+        },[]) 
+        //計算週k數據(二維陣列)
+        const weekKData = weeksWithData.map(weekArray => {
+            //每週的第一個物件
+            const firstDay = weekArray[0]
+            //每週的最後一個物件
+            const lastDay = weekArray[weekArray.length - 1]
+
+            const dailyMaxPrices = weekArray.map(dayItem => dayItem.max)
+            const dailyMinPrices = weekArray.map(dayItem => dayItem.min)
+
+            const totalVolume = weekArray.reduce((acc,dayItem) => acc + dayItem.Trading_Volume,0)
+
+            return {
+                open:firstDay.open,//該週的第一個交易日的開盤價。
+                close:lastDay.close,//該週的最後一個交易日的收盤價
+                high:Math.max(...dailyMaxPrices),//該週內所有日期的最高價
+                low:Math.min(...dailyMinPrices),//該週內所有日期的最低價
+                volume:totalVolume,//該週內所有日期的成交量總和
+                date:lastDay.date//該週的最後一個交易日的日期。
+            }
+        })
+        return weekKData
+    }
+    //月K數據
+    function monthsData() {
+        const monthKdata = []
+        //分月處理 (一維陣列)
+        function myCallback({date}) {
+            const d = new Date(date)
+            const year = d.getFullYear().toString()
+            const month =( d.getMonth() + 1).toString()
+            return `${year}-${month}`
+        }
+        const monthlyData = Object.groupBy(stockData.data,myCallback)
+         
+        for(const[monthKey,dataArray] of Object.entries(monthlyData)) {
+            //每月第一個物件
+            const firstObject = dataArray[0]
+            //每月最後一個物件
+            const lastObject = dataArray[dataArray.length - 1]
+
+            const dailyMaxPrices = dataArray.map(dayItem => dayItem.max)
+            const dailyMinPrices = dataArray.map(dayItem => dayItem.min)
+
+            const totalVolume = dataArray.reduce((acc,dayItem) => acc + dayItem.Trading_Volume,0)
+                
+            monthKdata.push({
+                open:firstObject.open,//該月的第一個交易日的開盤價。
+                close:lastObject.close,//該月的最後一個交易日的收盤價。
+                high:Math.max(...dailyMaxPrices),//該月內所有日期的最高價
+                low:Math.min(...dailyMinPrices),//該月內所有日期的最低價
+                volume:totalVolume,//該月內所有日期的成交量總和
+                date: lastObject.date, //該月的最後一個交易日的日期。
+            })
+        }
+        return monthKdata
+    }  
+    //數據格式轉換
+    function dataFormatConversion(data) {
+        //日期陣列 / [開盤, 收盤, 最低, 最高] 的二維數值陣列
+        const xAxisData = [] //日期
+        const yAxisData = [] //[開盤, 收盤, 最低, 最高]
+        data.forEach(
+            (item,index,arr) => {
+                xAxisData.push(item.date)
+                yAxisData.push([ item.open,item.close,item.low,item.high])   
+            }
+        )
+
+        return { xAxisData,yAxisData }    
+    }
+
+    //繪圖
+    function drawKChart(data,chartTitle) {
+        //格式轉換
+        const { xAxisData,yAxisData } = dataFormatConversion(data)
+        //Echarts 
+        const option = {
+            title: {
+                text:chartTitle
+            },
+            xAxis:{
+                type:'category',
+                data:xAxisData,
+                // boundaryGap: true
+            },
+            yAxis:{
+                scale:true //  Y 軸刻度能適應數據範圍
+            },
+            tooltip:{
+                trigger:'axis',
+                axisPointer:{
+                    type:'cross'
+                }
+            },
+            grid:{
+                left:'5%',// 左邊留白padding
+                right:'5%',
+                bottom:80, //給 dataZoom 滑塊留出足夠的空間
+                containLabel:true // 確保標籤包含在內
+            },
+            dataZoom:[
+                {
+                    type:'inside',// 內部縮放 (滑鼠滾輪/觸摸)
+                    start:50,     // 初始顯示範圍：從數據的 50% 開始   
+                    end:100,      // 初始顯示範圍：到數據的 1000% 結束
+                    // minValueSpan:10
+                },
+                {
+                    show:true,
+                    type:'slider',// 滑塊縮放 (底部滾動條)
+                    bottom:10,
+                    start:50,
+                    end:100,
+                    // minValueSpan:10
+                }
+            ],
+            series:[
+                {
+                    name:chartTitle,
+                    type:'candlestick',
+                    data:yAxisData,
+                },
+            ]        
+        }
+        KChart.setOption(option)
+    } 
+    //promise物件
+    getData( )
+        .then(
+            allData => {
+                globalWeeklyData = allData.weeklyData
+                globalMonthlyData = allData.monthlyData
+                globalDailyData = allData.dailyData
+                //初始圖避免空畫面
+                drawKChart(globalWeeklyData,'週K')
+                switchActiveBtn(btnWeekly,allBtn)
+            }    
+        )
+        .catch(
+            error => {
+                console.error(error)
+            }
+        )
+    
+    function switchActiveBtn(activeBtn,buttons) {
+        buttons.forEach( btn => {
+            if( btn == activeBtn ) {
+                btn.classList.add(...activeClass.split(' '))
+            }else {
+                btn.classList.remove(...activeClass.split(' '))
+            }
+        })
+    } 
+
+    //監聽
+    btnDaily.addEventListener('click', () => {
+        drawKChart(globalDailyData,'日K')
+        switchActiveBtn(btnDaily,allBtn)
+    })        
+    btnWeekly.addEventListener('click', () => {
+        drawKChart(globalWeeklyData,'週k')
+        switchActiveBtn(btnWeekly,allBtn)
+    }) 
+    btnMonthly.addEventListener('click', () => {
+        drawKChart(globalMonthlyData,'月K')
+        switchActiveBtn(btnMonthly,allBtn)
+
+    }) 
+</script>
+</html>
+<!-- 
+    Object.groupBy 環境不行改為reduce 或 for...of 分組
+
+-->
+
+
+
+
+
+
+

@@ -1,3 +1,4 @@
+<!-- 非營利作品展示，數據為延遲/模擬，請勿用於實際投資參考 -->
 <script setup>
 import {ref,onMounted} from 'vue'
 // import { errorMessages } from 'vue/compiler-sfc'
