@@ -1,44 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K線圖</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-</head>
-<body>  
+<template>
     <div class="w-[800px]" >
         <h1 class="w-full text-center p-4">K線圖</h1>
         <div class="w-full flex justify-center gap-2 bg-slate-200 p-4">
-            <button id="btnDaily" class="px-8 py-2">日K</button>
-            <button id="btnWeekly" class="px-8 py-2">週K</button>
-            <button id="btnMonthly" class="px-8 py-2">月K</button>
+            <button 
+                class="px-8 py-2"
+                :class="{ 'bg-white text-red-500':isActive('day')}"
+                @click="switchChart('day')"                
+            >
+                日K
+            </button>
+            <button 
+                class="px-8 py-2"
+                :class="{ 'bg-white text-red-500':isActive('week')}"
+                @click="switchChart('week')"  
+            >
+                週K
+            </button>
+            <button 
+                class="px-8 py-2"
+                :class="{ 'bg-white text-red-500':isActive('month')}"
+                @click="switchChart('month')" 
+            >
+                月K
+            </button>
         </div>
-        <div id="main" style="width: 800px;height: 500px;"></div>
-    </div>
-</body>
+        <div ref="chartRef" style="width: 800px;height: 500px;">
 
-<script>
+        </div>
+    </div>   
+</template>
+
+
+<script setup>
+import {ref,onMounted} from 'vue'
     let stock_id = '2330'
     const START_DATE = '2022-01-01'
     const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stock_id}&start_date=${START_DATE}`
-    let stockData;
-    const KChart = echarts.init(document.getElementById('main'))
-    let globalDailyData;
-    let globalWeeklyData;
-    let globalMonthlyData;
-    const btnDaily = document.getElementById('btnDaily')
-    const btnWeekly = document.getElementById('btnWeekly')
-    const btnMonthly = document.getElementById('btnMonthly')
-    const activeClass = 'bg-white text-red-500'
-    const allBtn = [btnDaily,btnWeekly,btnMonthly]
+    const stockData = ref(null);
+    let KChart = null // 宣告 KChart 實例變數
+    const chartRef = ref(null)//
+    const globalDailyData = ref(null);
+    const globalWeeklyData = ref(null);
+    const globalMonthlyData = ref(null);
+  
+    const activeKey = ref('week')
     
-    
-   
     async function getData() {
       const resopen = await fetch(url)
-      stockData = await resopen.json() 
+      stockData.value = await resopen.json() 
     
       const weeklyData = weeksData()//取得stockData資料在執行
       const monthlyData = monthsData()
@@ -47,7 +56,7 @@
     } 
     //日K數據
     function daysData() {
-        const dayKData = stockData.data.map(day => {
+        const dayKData = stockData.value.data.map(day => {
             return {
                 open:day.open,
                 close:day.close,
@@ -56,7 +65,7 @@
                 date:day.date,
             }
         })
-        console.log('dayKData',dayKData)
+        // console.log('dayKData',dayKData)
 
         return dayKData
     }
@@ -65,7 +74,7 @@
         //分週處理 (二維陣列)
         //星期一~星期五為一週
         //當日期為星期日為[0]，星期為六為[6]        
-        const weeksWithData = stockData.data.reduce((acc,item) => {
+        const weeksWithData = stockData.value.data.reduce((acc,item) => {
             const dayIndex = new Date(item.date).getDay() 
             // 跨週判斷需要參考前一個 item 的 date
             const lastWeek = acc[acc.length - 1]
@@ -115,7 +124,7 @@
             const month =( d.getMonth() + 1).toString()
             return `${year}-${month}`
         }
-        const monthlyData = Object.groupBy(stockData.data,myCallback)
+        const monthlyData = Object.groupBy(stockData.value.data,myCallback)
          
         for(const[monthKey,dataArray] of Object.entries(monthlyData)) {
             //每月第一個物件
@@ -145,7 +154,7 @@
         const xAxisData = [] //日期
         const yAxisData = [] //[開盤, 收盤, 最低, 最高]
         data.forEach(
-            (item,index,arr) => {
+            (item) => {
                 xAxisData.push(item.date)
                 yAxisData.push([ item.open,item.close,item.low,item.high])   
             }
@@ -210,57 +219,36 @@
         KChart.setOption(option)
     } 
     //promise物件
-    getData( )
-        .then(
-            allData => {
-                globalWeeklyData = allData.weeklyData
-                globalMonthlyData = allData.monthlyData
-                globalDailyData = allData.dailyData
-                //初始圖避免空畫面
-                drawKChart(globalWeeklyData,'週K')
-                switchActiveBtn(btnWeekly,allBtn)
-            }    
-        )
-        .catch(
-            error => {
-                console.error(error)
-            }
-        )
-    
-    function switchActiveBtn(activeBtn,buttons) {
-        buttons.forEach( btn => {
-            if( btn == activeBtn ) {
-                btn.classList.add(...activeClass.split(' '))
-            }else {
-                btn.classList.remove(...activeClass.split(' '))
-            }
-        })
-    } 
+    onMounted(async() => {
+        try{
+            const allData = await getData( )
+            globalWeeklyData.value = allData.weeklyData
+            globalMonthlyData.value = allData.monthlyData
+            globalDailyData.value = allData.dailyData
+            
+            KChart = echarts.init(chartRef.value)
+            //初始圖避免空畫面
+            drawKChart(globalWeeklyData.value,'週K')
 
-    //監聽
-    btnDaily.addEventListener('click', () => {
-        drawKChart(globalDailyData,'日K')
-        switchActiveBtn(btnDaily,allBtn)
+        }catch(error){
+            console.error(error);
+        }       
     })        
-    btnWeekly.addEventListener('click', () => {
-        drawKChart(globalWeeklyData,'週k')
-        switchActiveBtn(btnWeekly,allBtn)
-    }) 
-    btnMonthly.addEventListener('click', () => {
-        drawKChart(globalMonthlyData,'月K')
-        switchActiveBtn(btnMonthly,allBtn)
+    const isActive = key => {
+        return activeKey.value === key
+    } 
+    function switchChart(key) {
+        activeKey.value = key
+       
+        if(key === 'day') {
+            drawKChart(globalDailyData.value,'日K')
 
-    }) 
+        }else if(key === 'week') {
+            drawKChart(globalWeeklyData.value,'週k')
+
+        }else if(key === 'month'){
+            drawKChart(globalMonthlyData.value,'月K')
+
+        }
+    }     
 </script>
-</html>
-<!-- 
-    Object.groupBy 環境不行改為reduce 或 for...of 分組
-
--->
-
-
-
-
-
-
-
