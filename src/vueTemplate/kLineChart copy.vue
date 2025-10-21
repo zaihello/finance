@@ -1,5 +1,5 @@
 <template>
-    <div class="w-full lg:w-[800px]" >
+    <div class="w-[800px]" >
         <h1 class="w-full text-center p-4">K線圖</h1>
         <div class="w-full flex justify-center gap-2 bg-slate-200 p-4">
             <button 
@@ -24,7 +24,7 @@
                 月K
             </button>
         </div>
-        <div ref="chartRef" class="w-full lg:w-[800px]" style="height: 500px;">
+        <div ref="chartRef" style="width: 800px;height: 500px;">
 
         </div>
     </div>   
@@ -32,17 +32,12 @@
 
 
 <script setup>
-import {ref,onMounted,onUnmounted} from 'vue'
+import {ref,onMounted} from 'vue'
     let stock_id = '2330'
     const START_DATE = '2022-01-01'
     const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stock_id}&start_date=${START_DATE}`
     const stockData = ref(null);
     let KChart = null // 宣告 KChart 實例變數
-const resizeChart = () => {
-    if (KChart) {
-        KChart.resize();
-    }
-};
     const chartRef = ref(null)//
     const globalDailyData = ref(null);
     const globalWeeklyData = ref(null);
@@ -192,8 +187,8 @@ const resizeChart = () => {
                 }
             },
             grid:{
-                left:'10',// 左邊留白padding
-                right:'10',
+                left:'5%',// 左邊留白padding
+                right:'5%',
                 bottom:80, //給 dataZoom 滑塊留出足夠的空間
                 containLabel:true // 確保標籤包含在內
             },
@@ -235,15 +230,10 @@ const resizeChart = () => {
             //初始圖避免空畫面
             drawKChart(globalWeeklyData.value,'週K')
 
-            window.addEventListener('resize',resizeChart)
-
         }catch(error){
             console.error(error);
         }       
-    })
-    onUnmounted(() => {
-        window.removeEventListener('resize',resizeChart)
-    })
+    })        
     const isActive = key => {
         return activeKey.value === key
     } 
