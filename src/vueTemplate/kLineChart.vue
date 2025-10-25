@@ -175,7 +175,7 @@ const resizeChart = () => {
         //Echarts 
         const option = {
             title: {
-                text:chartTitle
+                // text:chartTitle
             },
             xAxis:{
                 type:'category',

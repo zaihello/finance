@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三大法人</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+
+</head>
+<style>
+    tbody tr:nth-child(odd) {
+        background-color:rgba(231, 230, 230, 0.904)
+    }
+</style>
+<body>
+    <div class="w-full">
+        <div id="main" class="w-full lg:w-1/2 h-[500px]"></div>
+        <table class="w-full lg:w-1/2 border" >
+            <thead >
+                <tr>
+                    <th>日期</th>
+                    <th>外資</th>
+                    <th>投信</th>
+                    <th>自營商</th>
+                    <th>合計</th>
+                </tr>
+            </thead>
+            <tbody id="table-body" ></tbody>
+        </table>   
+    </div>
+</body>
+<script>
+    // 外資、投信、自營
+    const STOCK_ID = '2330'
+    const START_DATE = '2022-01-01'
+    const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id=${STOCK_ID}&start_date=${START_DATE}`
+
+    const KChart = echarts.init(document.getElementById('main'))
+    const dateElement = document.getElementById('date')
+    const foreignElement = document.getElementById('foreign')
+    const trustElement = document.getElementById('trust')
+    const dalerElement = document.getElementById('daler')
+    const totalElement = document.getElementById('total')
+
+    async function getData() {
+        try{
+            const respon = await fetch(url)
+            return await respon.json()
+        }catch(error){
+            console.error('取得資料失敗:',error)    
+        }  
+    } 
+    //x軸日期陣列
+    function institutionalTrading(stockData) {
+        const originalDate = stockData.data.map( item => item.date)
+        //x軸日期陣列
+        const datesArray = Array.from(new Set(originalDate))
+        const originalTrusts = stockData.data.filter( item => 
+            item.name === 'Investment_Trust'
+        )
+        //投信陣列
+        const trustsArray = originalTrusts.map( item =>
+            item.buy - item.sell
+        )
+        //外資(Foreign_Investor、Foreign_Dealer_Self)
+        const originalForeign = stockData.data.filter( item => 
+            item.name === 'Foreign_Investor' || item.name === 'Foreign_Dealer_Self' 
+        )
+        const groupForeign = originalForeign.reduce((acc,item) => {
+            const lastArray = acc[acc.length - 1]
+            if(acc.length == 0 || lastArray[0].date !== item.date){
+                acc.push([item])
+            }else{
+                lastArray.push(item)
+            }
+            return acc
+        },[])
+        // 外資陣列
+        const foreignsArray = groupForeign.map(item => {
+          return  ( item[0].buy - item[0].sell ) + ( item[1].buy - item[1].sell )
+        })
+
+        //自營商(Dealer_self、Dealer_Hedging)
+        const originaldDaler = stockData.data.filter( item => {
+           return item.name === 'Dealer_self' || item.name === 'Dealer_Hedging'
+        })
+        const groupDaler = originaldDaler.reduce((acc,item) => {
+            //正在建立的組
+            const lastArray = acc[acc.length - 1]
+            
+            if(acc.length === 0 || lastArray[0].date != item.date) {
+                acc.push([item])
+            }else {
+                lastArray.push(item)
+            }
+            return acc
+        },[])
+        //自營商陣列
+        const dalersArray = groupDaler.map(item => {
+            return (item[0].buy - item[0].sell) + (item[1].buy - item[1].sell) 
+        })
+        //合計
+        const originalTotal = [trustsArray,foreignsArray,dalersArray]
+        //合計陣列
+        const totalsArray = originalTotal.reduce((acc,currentArray) => {
+            currentArray.forEach( (value,index) => {
+                if(acc[index] === undefined) {
+                    acc[index] = 0
+                }
+
+                acc[index] += value
+            })
+            return acc  
+        },[])
+
+        return {
+            datesArray,
+            trustsArray,
+            foreignsArray,
+            dalersArray,
+            totalsArray
+        }
+     
+    }
+    //繪圖
+    function drawChart(data) {
+        const option = {
+            title: {
+                text:'三大法人'
+            },
+            tooltip:{
+                trigger:'axis',
+                axisPointer:{
+                    type:'shadow'
+                }
+            },
+            legend:{
+                data:['外資','投信','自營商'],
+                bottom:10
+            },
+          
+            xAxis: {
+                type:'category',
+                data:data.datesArray,
+                // axisLabel: {
+
+                // },
+            },
+            yAxis: {
+                type:'value',
+            },
+            series:[
+                {
+                    name:'外資',
+                    type:'bar',
+                    stack:'total',//堆疊長條圖
+                    data:data.foreignsArray
+                },
+                {
+                    name:'投信',
+                    type:'bar',
+                    stack:'total',
+                    data:data.trustsArray
+                },
+                {
+                    name:'自營商',
+                    type:'bar',
+                    stack:'total',
+                    data:data.dalersArray
+                },
+                {
+                    name:'合計',
+                    type:'bar',
+                    stack:'none',//不要堆疊
+                    data:data.totalsArray,
+                    //將堆疊元素隱藏
+                    itemStyle: {
+                        opacity:0,
+                    },
+                    //確保不會影響圖例（即使圖例中沒有它）
+                    legendHoverLink:false
+                }
+            ]
+        } 
+        KChart.setOption(option)
+
+    }
+    //取20筆資料(最新開始)
+    function view(data) {
+        const dates = data.datesArray.reverse().slice(0,20)
+        const foreigns = data.foreignsArray.reverse().slice(0,20) 
+        const trusts = data.trustsArray.reverse().slice(0,20)
+        const dalers = data.dalersArray.reverse().slice(0,20)
+        const totals = data.totalsArray.reverse().slice(0,20)
+
+        const tableBody = document.getElementById('table-body')
+       
+        for(let i = 0 ; i < dates.length ; i++ ) {
+            
+            const row = tableBody.insertRow()//創建tr元素
+            row.classList.add('text-center')
+            row.insertCell().innerText = dates[i]
+            row.insertCell().innerText = foreigns[i]
+            row.insertCell().innerText = trusts[i]
+            row.insertCell().innerText = dalers[i]
+
+            const totalCell = row.insertCell()
+            totalCell.innerText = totals[i]
+
+            if( totals[i] > 0) {
+                totalCell.classList.add('text-rose-500')
+            } else if(totals[i] < 0) {
+                totalCell.classList.add('text-green-500')
+            }
+        }    
+    }
+    
+    getData().then((fetchData) => {
+
+        const threeMajorInstitutionsData = institutionalTrading(fetchData) 
+        drawChart(threeMajorInstitutionsData)
+
+        view(threeMajorInstitutionsData)
+
+        console.log('1024',institutionalTrading(fetchData))
+    })
+    //加入resize()圖表才會自動響應其容器。
+    window.addEventListener('resize',() => {
+        KChart.resize()
+    })
+</script>
+</html>

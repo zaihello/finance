@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 </head>
 <body>  
-    <div class="w-[800px]" >
+    <div class="w-[800px]">
         <h1 class="w-full text-center p-4">K線圖</h1>
         <div class="w-full flex justify-center gap-2 bg-slate-200 p-4">
             <button id="btnDaily" class="px-8 py-2">日K</button>
@@ -37,8 +37,8 @@
     
    
     async function getData() {
-      const resopen = await fetch(url)
-      stockData = await resopen.json() 
+      const respon = await fetch(url)
+      stockData = await respon.json() 
     
       const weeklyData = weeksData()//取得stockData資料在執行
       const monthlyData = monthsData()
@@ -256,6 +256,7 @@
 <!-- 
     Object.groupBy 環境不行改為reduce 或 for...of 分組
 
+    圖表響應式還沒做!
 -->
 
 
