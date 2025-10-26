@@ -1,5 +1,5 @@
 <template>
-<div class="w-full p-3">
+<div class="w-full">
     <div ref="chartRef" class="w-full lg:w-1/2 h-[500px]"></div>
     <table class="w-full lg:w-1/2 border" >
         <thead >
@@ -145,7 +145,11 @@ import {ref,onMounted, onUnmounted} from 'vue'
                 data:['外資','投信','自營商'],
                 bottom:10
             },
-          
+            grid:{
+                left:'20',
+                right:'20',
+                containLabel:true//(X、Y軸)標籤能被完整顯示在區域內
+            },
             xAxis: {
                 type:'category',
                 data:data.datesArray,
