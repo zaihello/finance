@@ -1,5 +1,5 @@
 <template>
-<div class="w-full">
+<div class="w-full p-3">
     <div ref="chartRef" class="w-full lg:w-1/2 h-[500px]"></div>
     <table class="w-full lg:w-1/2 border" >
         <thead >
@@ -234,14 +234,12 @@ import {ref,onMounted, onUnmounted} from 'vue'
         //監聽  加入resize()圖表才會自動響應其容器。
         window.addEventListener('resize',resizeChart)
 
-        console.log('1024',institutionalTrading(fetchData))
     })})
 
     onUnmounted(() => {
         window.removeEventListener('resize',resizeChart)
     })
     
-    // console.log('tbodyData',tbodyData)
 </script>
 <style scoped>
 tbody tr:nth-child(odd) {
