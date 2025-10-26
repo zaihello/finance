@@ -1,8 +1,11 @@
 <template>
 <div class="w-full">
     <div ref="chartRef" class="w-full lg:w-1/2 h-[500px]"></div>
-    <table class="w-full lg:w-1/2 border" >
-        <thead >
+    <table class="w-full lg:w-1/2 border">
+        <thead>
+            <tr>
+                <th colspan="5" class="text-right pr-2 text-sm">單位：千</th>
+            </tr>
             <tr>
                 <th>日期</th>
                 <th>外資</th>
@@ -18,14 +21,14 @@
                 class="text-center"  
             >
                 <td>{{data.date}}</td>
-                <td>{{data.foreign}}</td>
-                <td>{{data.trust}}</td>
-                <td>{{data.daler}}</td>
+                <td>{{data.foreign.toLocaleString()}}</td>
+                <td>{{data.trust.toLocaleString()}}</td>
+                <td>{{data.daler.toLocaleString()}}</td>
                 <td
                     :class="{'text-rose-500':data.total > 0,
                     'text-green-500':data.total < 0}"
                 >
-                    {{data.total}}
+                    {{data.total.toLocaleString()}}
                 </td>
             </tr>           
         </tbody>
@@ -57,7 +60,7 @@ import {ref,onMounted, onUnmounted} from 'vue'
             console.error('取得資料失敗:',error)    
         }  
     } 
-    //x軸日期陣列
+    //單位:千，所以除1000，並四捨五入  
     function institutionalTrading(stockData) {
         const originalDate = stockData.data.map( item => item.date)
         //x軸日期陣列
@@ -67,7 +70,7 @@ import {ref,onMounted, onUnmounted} from 'vue'
         )
         //投信陣列
         const trustsArray = originalTrusts.map( item =>
-            item.buy - item.sell
+          Math.round((item.buy - item.sell) / 1000)
         )
         //外資(Foreign_Investor、Foreign_Dealer_Self)
         const originalForeign = stockData.data.filter( item => 
@@ -84,7 +87,7 @@ import {ref,onMounted, onUnmounted} from 'vue'
         },[])
         // 外資陣列
         const foreignsArray = groupForeign.map(item => {
-          return  ( item[0].buy - item[0].sell ) + ( item[1].buy - item[1].sell )
+          return Math.round((( item[0].buy - item[0].sell ) + ( item[1].buy - item[1].sell )) /1000)
         })
 
         //自營商(Dealer_self、Dealer_Hedging)
@@ -104,7 +107,7 @@ import {ref,onMounted, onUnmounted} from 'vue'
         },[])
         //自營商陣列
         const dalersArray = groupDaler.map(item => {
-            return (item[0].buy - item[0].sell) + (item[1].buy - item[1].sell) 
+            return Math.round(((item[0].buy - item[0].sell) + (item[1].buy - item[1].sell)) / 1000) 
         })
         //合計
         const originalTotal = [trustsArray,foreignsArray,dalersArray]
@@ -120,6 +123,10 @@ import {ref,onMounted, onUnmounted} from 'vue'
             return acc  
         },[])
 
+        const a = [16000,27000,38000,49000,50000]
+        const newA = a.map(x => Math.round(x/10)) 
+        console.log('a',a)
+        console.log('newA',newA)
         return {
             datesArray,
             trustsArray,
@@ -146,8 +153,8 @@ import {ref,onMounted, onUnmounted} from 'vue'
                 bottom:10
             },
             grid:{
-                left:'20',
-                right:'20',
+                left:'10',
+                right:'10',
                 containLabel:true//(X、Y軸)標籤能被完整顯示在區域內
             },
             xAxis: {
