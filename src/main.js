@@ -4,6 +4,7 @@ import './style.css'
 import App from './App.vue'
 import stockAnalysis from './vueTemplate/stockAnalysis.vue'
 import KLineChart from './vueTemplate/kLineChart.vue'
+import threeMajorInstitutions from './vueTemplate/threeMajorInstitutions.vue'
 
 
 const routes = [
@@ -16,6 +17,11 @@ const routes = [
         path:'/kline',
         name:'KLine',
         component:KLineChart
+    },
+    {
+        path:'/threemajor',
+        name:'threemajor',
+        component:threeMajorInstitutions
     }
 ]
 

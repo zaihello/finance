@@ -38,11 +38,11 @@ import {ref,onMounted,onUnmounted} from 'vue'
     const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stock_id}&start_date=${START_DATE}`
     const stockData = ref(null);
     let KChart = null // 宣告 KChart 實例變數
-const resizeChart = () => {
-    if (KChart) {
-        KChart.resize();
-    }
-};
+    const resizeChart = () => {
+        if (KChart) {
+            KChart.resize();
+        }
+    };
     const chartRef = ref(null)//
     const globalDailyData = ref(null);
     const globalWeeklyData = ref(null);

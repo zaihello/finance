@@ -1,43 +1,54 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三大法人</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-
-</head>
-<style>
-    tbody tr:nth-child(odd) {
-        background-color:rgba(231, 230, 230, 0.904)
-    }
-</style>
-<body>
-    <div class="w-full">
-        <div id="main" class="w-full lg:w-1/2 h-[500px]"></div>
-        <table class="w-full lg:w-1/2 border" >
-            <thead >
-                <tr>
-                    <th>日期</th>
-                    <th>外資</th>
-                    <th>投信</th>
-                    <th>自營商</th>
-                    <th>合計</th>
-                </tr>
-            </thead>
-            <tbody id="table-body" ></tbody>
-        </table>   
-    </div>
-</body>
-<script>
+<template>
+<div class="w-full">
+    <div ref="chartRef" class="w-full lg:w-1/2 h-[500px]"></div>
+    <table class="w-full lg:w-1/2 border" >
+        <thead >
+            <tr>
+                <th>日期</th>
+                <th>外資</th>
+                <th>投信</th>
+                <th>自營商</th>
+                <th>合計</th>
+            </tr>
+        </thead>
+        <tbody >
+            <tr 
+                v-for="data of tbodyData"
+                :key="data.date" 
+                class="text-center"  
+            >
+                <td>{{data.date}}</td>
+                <td>{{data.foreign}}</td>
+                <td>{{data.trust}}</td>
+                <td>{{data.daler}}</td>
+                <td
+                    :class="{'text-rose-500':data.total > 0,
+                    'text-green-500':data.total < 0}"
+                >
+                    {{data.total}}
+                </td>
+            </tr>           
+        </tbody>
+    </table>   
+</div>    
+</template>
+<script setup>
+import {ref,onMounted, onUnmounted} from 'vue'
     // 外資、投信、自營
     const STOCK_ID = '2330'
     const START_DATE = '2022-01-01'
     const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id=${STOCK_ID}&start_date=${START_DATE}`
 
-    const KChart = echarts.init(document.getElementById('main'))
-   
+    // const KChart = echarts.init(document.getElementById('main'))
+    const tbodyData = ref([])
+    const chartRef = ref(null)
+    let chart = null //宣告圖表實例
+    const resizeChart = () => {
+        if(chart) {
+            chart.resize()
+        }
+    }
+
     async function getData() {
         try{
             const respon = await fetch(url)
@@ -178,7 +189,7 @@
                 }
             ]
         } 
-        KChart.setOption(option)
+        chart.setOption(option)
 
     }
     //取20筆資料(最新開始)
@@ -188,41 +199,53 @@
         const trusts = data.trustsArray.reverse().slice(0,20)
         const dalers = data.dalersArray.reverse().slice(0,20)
         const totals = data.totalsArray.reverse().slice(0,20)
-
-        const tableBody = document.getElementById('table-body')
        
         for(let i = 0 ; i < dates.length ; i++ ) {
-            
-            const row = tableBody.insertRow()//創建tr元素
-            row.classList.add('text-center')
-            row.insertCell().innerText = dates[i]
-            row.insertCell().innerText = foreigns[i]
-            row.insertCell().innerText = trusts[i]
-            row.insertCell().innerText = dalers[i]
+            const date = dates[i]
+            const foreign = foreigns[i]
+            const trust = trusts[i]
+            const daler = dalers[i]
+            const total = totals[i]
 
-            const totalCell = row.insertCell()
-            totalCell.innerText = totals[i]
+            tbodyData.value.push(
+                {
+                    date,
+                    foreign,
+                    trust,
+                    daler,
+                    total
+                }
 
-            if( totals[i] > 0) {
-                totalCell.classList.add('text-rose-500')
-            } else if(totals[i] < 0) {
-                totalCell.classList.add('text-green-500')
-            }
+            )
         }    
+        return tbodyData
     }
     
+    onMounted(() => {
     getData().then((fetchData) => {
 
-        const threeMajorInstitutionsData = institutionalTrading(fetchData) 
+        const threeMajorInstitutionsData = institutionalTrading(fetchData)
+                chart = echarts.init(chartRef.value)
+
         drawChart(threeMajorInstitutionsData)
 
         view(threeMajorInstitutionsData)
 
+        //監聽  加入resize()圖表才會自動響應其容器。
+        window.addEventListener('resize',resizeChart)
+
         console.log('1024',institutionalTrading(fetchData))
+    })})
+
+    onUnmounted(() => {
+        window.removeEventListener('resize',resizeChart)
     })
-    //加入resize()圖表才會自動響應其容器。
-    window.addEventListener('resize',() => {
-        KChart.resize()
-    })
+    
+    // console.log('tbodyData',tbodyData)
 </script>
-</html>
+<style scoped>
+tbody tr:nth-child(odd) {
+    background-color:rgba(231, 230, 230, 0.904)
+}
+
+</style>
