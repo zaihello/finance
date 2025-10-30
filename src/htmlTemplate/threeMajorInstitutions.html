@@ -41,9 +41,13 @@
     async function getData() {
         try{
             const respon = await fetch(url)
+            if(!respon.ok) {
+                throw new Error(`HTTP 錯誤! 狀態碼:${response.status}`)
+            }
             return await respon.json()
         }catch(error){
-            console.error('取得資料失敗:',error)    
+            console.error('取得資料失敗:',error)  
+            throw error;  
         }  
     } 
     //x軸日期陣列
@@ -211,14 +215,17 @@
         }    
     }
     
-    getData().then((fetchData) => {
+    getData()
+    .then((fetchData) => {
 
         const threeMajorInstitutionsData = institutionalTrading(fetchData) 
         drawChart(threeMajorInstitutionsData)
 
         view(threeMajorInstitutionsData)
 
-        console.log('1024',institutionalTrading(fetchData))
+    })
+    .catch((err) => {
+        console.error(err)
     })
     //加入resize()圖表才會自動響應其容器。
     window.addEventListener('resize',() => {

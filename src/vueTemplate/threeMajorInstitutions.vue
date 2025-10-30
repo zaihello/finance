@@ -42,7 +42,6 @@ import {ref,onMounted, onUnmounted} from 'vue'
     const START_DATE = '2022-01-01'
     const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id=${STOCK_ID}&start_date=${START_DATE}`
 
-    // const KChart = echarts.init(document.getElementById('main'))
     const tbodyData = ref([])
     const chartRef = ref(null)
     let chart = null //宣告圖表實例
@@ -55,9 +54,14 @@ import {ref,onMounted, onUnmounted} from 'vue'
     async function getData() {
         try{
             const respon = await fetch(url)
+
+            if(!respon.ok) {
+                throw new Error(`HTTP 錯誤! 狀態碼:${respon.status}`)
+            }
             return await respon.json()
         }catch(error){
-            console.error('取得資料失敗:',error)    
+            console.error('取得資料失敗:',error) 
+            throw error   
         }  
     } 
     //單位:千，所以除1000，並四捨五入  
@@ -122,11 +126,7 @@ import {ref,onMounted, onUnmounted} from 'vue'
             })
             return acc  
         },[])
-
-        const a = [16000,27000,38000,49000,50000]
-        const newA = a.map(x => Math.round(x/10)) 
-        console.log('a',a)
-        console.log('newA',newA)
+       
         return {
             datesArray,
             trustsArray,
@@ -140,7 +140,7 @@ import {ref,onMounted, onUnmounted} from 'vue'
     function drawChart(data) {
         const option = {
             title: {
-                text:'三大法人'
+                text:'三大法人買賣超'
             },
             tooltip:{
                 trigger:'axis',
@@ -233,19 +233,25 @@ import {ref,onMounted, onUnmounted} from 'vue'
     }
     
     onMounted(() => {
-    getData().then((fetchData) => {
+        getData()
+        .then((fetchData) => {
 
-        const threeMajorInstitutionsData = institutionalTrading(fetchData)
-                chart = echarts.init(chartRef.value)
+            const threeMajorInstitutionsData = institutionalTrading(fetchData)
+                    chart = echarts.init(chartRef.value)
 
-        drawChart(threeMajorInstitutionsData)
+            drawChart(threeMajorInstitutionsData)
 
-        view(threeMajorInstitutionsData)
+            view(threeMajorInstitutionsData)
 
-        //監聽  加入resize()圖表才會自動響應其容器。
-        window.addEventListener('resize',resizeChart)
+            //監聽  加入resize()圖表才會自動響應其容器。
+            window.addEventListener('resize',resizeChart)
 
-    })})
+        })
+        .catch((err) => {
+            console.error(err)
+        })
+    })
+
 
     onUnmounted(() => {
         window.removeEventListener('resize',resizeChart)

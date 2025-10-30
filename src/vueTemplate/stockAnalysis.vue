@@ -25,6 +25,10 @@ import {ref,onMounted} from 'vue'
 
         try{
             const response = await fetch(url)
+
+            if(!response.ok) {
+                throw new Error(`HTTP 錯誤! 狀態碼:${response.status}`)
+            }
             const result = await response.json()
 
             if(!allStockInfo.value){
@@ -61,7 +65,8 @@ import {ref,onMounted} from 'vue'
             
         }catch (error) {
             errorMessage.value = '網路請求失敗，請檢查連線。'
-            console.error(error)
+            console.error(error);
+            throw error;
         }
     
 

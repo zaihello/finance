@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>融資融卷</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+
+</head>
+<body>
+    
+</body>
+<script>
+const STOCK_ID = '2330'
+const START_DATE = '2022-01-01'
+const URL = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMarginPurchaseShortSale&data_id=${STOCK_ID}&start_date=${START_DATE}`
+
+async function getApi() {
+    try{
+        const response = await fetch(URL)
+        if( !response.ok) {
+            throw new Error(`HTTP 錯誤! 狀態碼:${response.status}`);
+        }
+        const data = await response.json()
+
+        return data
+    }catch(err){
+        console.error(err);
+        throw err;
+    }
+    
+}
+
+async function main() {
+    try{
+        const apiData = await getApi()
+        console.log('apiData',apiData)
+    }catch(err){
+        console.error(err)
+    }  
+}
+main()
+</script>
+</html>

@@ -37,13 +37,24 @@
     
    
     async function getData() {
-      const respon = await fetch(url)
-      stockData = await respon.json() 
-    
-      const weeklyData = weeksData()//取得stockData資料在執行
-      const monthlyData = monthsData()
-      const dailyData = daysData()
-      return { weeklyData,monthlyData,dailyData }   
+        try{
+            const respon = await fetch(url)
+            if(!respon.ok) {
+                throw new Error(`HTTP 錯誤! 狀態碼:${response.status}`);
+            }
+           
+            stockData = await respon.json() 
+   
+            const weeklyData = weeksData()//取得stockData資料在執行
+            const monthlyData = monthsData()
+            const dailyData = daysData()
+            return { weeklyData,monthlyData,dailyData } 
+
+        }catch(err){
+            console.error(err);
+            throw err;
+        }
+        
     } 
     //日K數據
     function daysData() {

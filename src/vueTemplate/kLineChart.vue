@@ -51,13 +51,22 @@ import {ref,onMounted,onUnmounted} from 'vue'
     const activeKey = ref('week')
     
     async function getData() {
-      const resopen = await fetch(url)
-      stockData.value = await resopen.json() 
+        try{
+            const respon = await fetch(url)
+            if(!respon.ok) {
+                throw new Error(`HTTP 錯誤! 狀態碼:${respon.status}`)
+            }
+            stockData.value = await respon.json() 
     
-      const weeklyData = weeksData()//取得stockData資料在執行
-      const monthlyData = monthsData()
-      const dailyData = daysData()
-      return { weeklyData,monthlyData,dailyData }   
+            const weeklyData = weeksData()//取得stockData資料在執行
+            const monthlyData = monthsData()
+            const dailyData = daysData()
+            return { weeklyData,monthlyData,dailyData }   
+        }catch(err){
+            console.error(err);
+            throw err;
+        }
+     
     } 
     //日K數據
     function daysData() {
