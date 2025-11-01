@@ -3,12 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>融資融卷</title>
+    <title>融資融劵</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 
 </head>
 <body>
+    <div id="main" class="w-full lg:w-1/2 h-[500px]"></div>
+    <table class="w-full lg:w-1/2 border">
+        <thead>
+            <tr>
+                <th>日期</th>
+                <th>融資買進</th>
+                <th>融資賣出</th>
+                <th>融資餘額</th>
+                <th>融資使用率</th>
+                <th>融劵賣出</th>
+                <th>融劵買進</th>
+                <th>融劵餘額</th>
+                <th>劵資比</th>
+            </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+
     
 </body>
 <script>
@@ -31,15 +49,159 @@ async function getApi() {
     }
     
 }
+function marginShortData(apiData) {
+    //日期陣列
+    const datesArray = apiData.data.map(object => object.date)
+    console.log('datesArray',datesArray)
+    
+    const originalMarginArray = apiData.data.map(object => {      
+        return {
+            MarginPurchaseBuy:object.MarginPurchaseBuy, 
+            MarginPurchaseSell:object.MarginPurchaseSell, 
+            MarginPurchaseCashRepayment:object.MarginPurchaseCashRepayment 
+        }
+    })
+    //融資陣列
+    const marginsArray = originalMarginArray.map(object => {
+        return object.MarginPurchaseBuy - object.MarginPurchaseSell - object.MarginPurchaseCashRepayment
+    })
+    // console.log('originalMarginArray',originalMarginArray)
+    // console.log('marginsArray',marginsArray)
+    
+    const originalShortArray = apiData.data.map(object => {
+        return {
+            ShortSaleBuy:object.ShortSaleBuy,
+            ShortSaleSell:object.ShortSaleSell,
+            ShortSaleCashRepayment:object.ShortSaleCashRepayment
+        }
+    })
+    //融劵陣列
+    const shortstArray = originalShortArray.map(object => {
+        return object.ShortSaleSell - object.ShortSaleBuy - object.ShortSaleCashRepayment
+    })
+    return {
+        datesArray,
+        marginsArray,
+        shortstArray 
+    }
+}
+//取20筆資料
+function twentyData(apiData) {
+    const calculationData = apiData.data.map(object => {
+        //融資使用率 = 融資餘額 / 融資限額 * 100%
+        const marginUtilization = object.MarginPurchaseTodayBalance / object.MarginPurchaseLimit * 100
+        //劵資比 = 融劵餘額張數 / 融資餘額張數 * 100%
+        const shortMarginRatio = object.ShortSaleTodayBalance / object.MarginPurchaseTodayBalance * 100
+        return {
+            日期:object.date,
+            融資買進:object.MarginPurchaseBuy,
+            融資賣出:object.MarginPurchaseSell,
+            融資餘額:object.MarginPurchaseTodayBalance,
+            融資使用率:marginUtilization,
+            融劵賣出:object.ShortSaleSell,
+            融劵買進:object.ShortSaleBuy,
+            融劵餘額:object.ShortSaleTodayBalance,
+            劵資比:shortMarginRatio
+        }
+    })
+    const viewData = calculationData.reverse().slice(0,20)
+    const tableBody = document.getElementById('table-body')
+
+    viewData.forEach((item) => {
+        const trElement = document.createElement("tr")
+        
+        Object.values(item).forEach((value) => {
+            const tdElement = document.createElement("td")
+            tdElement.classList.add('text-center')
+
+            if( typeof value === 'number' && Number.isInteger(value) === false) {
+              const fixValue = value.toFixed(2) + '%'
+               
+              tdElement.textContent = fixValue
+            }else{
+                tdElement.textContent = value
+            }
+            
+            trElement.appendChild(tdElement)
+        })      
+    tableBody.appendChild(trElement)
+   
+    })
+    
+    
+    console.log('viewData',viewData)
+  
+} 
+
+function drawChart(data,chartInstance) {
+    const option ={ 
+        title:{
+            text:'融資融劵'
+        },
+        tooltip:{
+            trigger:'axis',
+            axisPointer:{
+                type:'shadow'
+            },
+        },
+        legend:{
+            data:['融資變化','融劵變化'],
+            bottom:10//在底部位置
+        },
+        grid:{
+            left:'10',
+            right:'10',
+            containLabel:true//(X、Y軸)標籤能被完整顯示在區域內
+        },
+        xAxis:{
+            type:'category',
+            data:data.datesArray
+        },
+        yAxis:{
+            type:'value'
+        },
+        series:[
+            {
+                name:'融資變化',
+                type:'bar',
+                data:data.marginsArray
+            },
+            {
+                name:'融劵變化',
+                type:'bar',
+                data:data.shortstArray
+            }
+        ]
+    }
+    chartInstance.setOption(option)
+}
 
 async function main() {
     try{
         const apiData = await getApi()
+        const data = marginShortData(apiData)
+        twentyData(apiData)
+        // 基于准备好的dom，初始化echarts实例
+        const myChart = echarts.init(document.getElementById('main'))
+
+        drawChart(data,myChart)
+
+        //加入resize()圖表才會自動響應其容器。
+        window.addEventListener('resize',() => {
+            myChart.resize()
+        })
+
         console.log('apiData',apiData)
+        console.log('marginShortData',marginShortData(apiData))
     }catch(err){
         console.error(err)
     }  
 }
 main()
 </script>
+<style>
+tbody tr:nth-child(odd) {
+    background-color:rgba(231, 230, 230, 0.904);
+}
+</style>
 </html>
