@@ -1,39 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>融資融劵</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<template>
+<div v-if="error">
+    載入資料失敗：{{ error.message }}
+</div>
+<div v-else-if="isLoading">
+    資料載入中... 請稍候。
+</div>
+<div 
+    v-show="!isLoading && !error"
+    ref="chartRef" 
+    class="w-full lg:w-1/2 h-[500px]">
+</div>
+<table class="w-full lg:w-1/2 border">
+    <thead>
+        <tr>
+            <th>日期</th>
+            <th>融資買進</th>
+            <th>融資賣出</th>
+            <th>融資餘額</th>
+            <th>融資使用率</th>
+            <th>融劵賣出</th>
+            <th>融劵買進</th>
+            <th>融劵餘額</th>
+            <th>劵資比</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr 
+            v-for="(object,index) in tableData"
+            :key="index"  
+        >
+            <td 
+                v-for="(value,key) in object"
+                :key="key"
+                class="text-center" 
+            >
+                {{formatValue(value) }}
+            </td>
+        </tr>
+    </tbody>
+</table>
+</template>
+<script setup>
+import { ref,onMounted,onUnmounted,nextTick } from 'vue';
 
-</head>
-<body>
-    <div id="main" class="w-full lg:w-1/2 h-[500px]"></div>
-    <table class="w-full lg:w-1/2 border">
-        <thead>
-            <tr>
-                <th>日期</th>
-                <th>融資買進</th>
-                <th>融資賣出</th>
-                <th>融資餘額</th>
-                <th>融資使用率</th>
-                <th>融劵賣出</th>
-                <th>融劵買進</th>
-                <th>融劵餘額</th>
-                <th>劵資比</th>
-            </tr>
-        </thead>
-        <tbody id="table-body"></tbody>
-    </table>
 
-    
-</body>
-<script>
-(async function() {
 const STOCK_ID = '2330'
 const START_DATE = '2022-01-01'
 const URL = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMarginPurchaseShortSale&data_id=${STOCK_ID}&start_date=${START_DATE}`
+
+const apiData = ref(null)
+const chartRef = ref(null)
+const tableData = ref([])
+
+let resizeHandler = null
+let myChart = null
+
+const isLoading = ref(true)
+const error = ref(null)
 
 async function getApi() {
     try{
@@ -102,32 +125,20 @@ function twentyData(apiData) {
             劵資比:shortMarginRatio
         }
     })
-    const viewData = calculationData.reverse().slice(0,20)
-    const tableBody = document.getElementById('table-body')
-
-    viewData.forEach((item) => {
-        const trElement = document.createElement("tr")
-        
-        Object.values(item).forEach((value) => {
-            const tdElement = document.createElement("td")
-            tdElement.classList.add('text-center')
-
-            if( typeof value === 'number' && Number.isInteger(value) === false) {
-              const fixValue = value.toFixed(2) + '%'
-               
-              tdElement.textContent = fixValue
-            }else{
-                const  a= value.toLocaleString()
-                tdElement.textContent = a
-            }
-            
-            trElement.appendChild(tdElement)
-        })      
-    tableBody.appendChild(trElement)
-   
-    })
- 
+    const viewsData = calculationData.reverse().slice(0,20)
+    // console.log('viewsData',viewsData)
+    return viewsData
 } 
+function formatValue(value) {
+    
+    if( typeof value === 'number' && Number.isInteger(value) === false) {
+        return  value.toFixed(2) + '%'
+    }else if(typeof value === 'number'){
+        return  value.toLocaleString()
+    }
+
+    return value;
+}
 
 function drawChart(data,chartInstance) {
     const option ={ 
@@ -173,30 +184,52 @@ function drawChart(data,chartInstance) {
 }
 
 async function main() {
+    isLoading.value = true;
+    error.value = null;
     try{
-        const apiData = await getApi()
-        const data = marginShortData(apiData)
-        twentyData(apiData)
+        apiData.value = await getApi()
+        const data = marginShortData(apiData.value)
+        tableData.value = twentyData(apiData.value)
         // 基于准备好的dom，初始化echarts实例
-        const myChart = echarts.init(document.getElementById('main'))
+        myChart = echarts.init(chartRef.value)
 
         drawChart(data,myChart)
 
-        //加入resize()圖表才會自動響應其容器。
-        window.addEventListener('resize',() => {
+        resizeHandler = () => {
             myChart.resize()
-        })
+        }
+        // //加入resize()圖表才會自動響應其容器。
+        window.addEventListener('resize',resizeHandler)
 
     }catch(err){
+        error.value = err
         console.error(err)
+    }finally {
+        isLoading.value = false
+        
+        await nextTick(() => { 
+            if (myChart) {
+                myChart.resize()
+            }
+        })
+         
     }  
 }
-main()
-})();    
+ 
+onMounted(main)
+onUnmounted(() => {
+    if(resizeHandler) {
+        window.removeEventListener('resize',resizeHandler)
+    }
+    if(myChart) {
+        myChart.dispose()//銷毀實例方法
+    }
+   
+})
+ 
 </script>
-<style>
+<style scoped>
 tbody tr:nth-child(odd) {
     background-color:rgba(231, 230, 230, 0.904);
 }
 </style>
-</html>

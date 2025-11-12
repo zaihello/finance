@@ -5,6 +5,7 @@ import App from './App.vue'
 import stockAnalysis from './vueTemplate/stockAnalysis.vue'
 import KLineChart from './vueTemplate/kLineChart.vue'
 import threeMajorInstitutions from './vueTemplate/threeMajorInstitutions.vue'
+import marginShort from './vueTemplate/marginShort.vue'
 
 
 const routes = [
@@ -22,7 +23,13 @@ const routes = [
         path:'/threemajor',
         name:'threemajor',
         component:threeMajorInstitutions
-    }
+    },
+    {
+        path:'/marginShort',
+        name:'marginShort',
+        component:marginShort
+    },
+   
 ]
 
 const router = createRouter({
